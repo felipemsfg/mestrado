@@ -1,0 +1,109 @@
+<!-- <p>paciente works!</p> -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card card-accent-primary">
+            <div class="card-header">
+                PACIENTES
+                <div class="card-header-actions">
+                    <button type="button" class="btn btn-outline-primary active" aria-pressed="true" (click)="NovoModal()">NOVO</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered table-striped table-sm" *ngIf="patientCollection">
+                    <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Data do Exame</th>
+                            <th>MTA Direito</th>
+                            <th>MTA Esquerdo</th>
+                            <th>Imagem Direita</th>
+                            <th>Imagem Esquerda</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let item of patientCollection">
+                            <td>{{item.patientId}}</td>
+                            <td>{{item.imageDate | date: 'dd/MM/yyyy'}}</td>
+                            <td>{{item.mtaRight}}</td>
+                            <td>{{item.mtaLeft}}</td>
+                            <td><img src="{{item.mtaRightImage}}" style="max-width: 200px; max-height: 300px;" /></td>
+                            <td><img src="{{item.mtaLeftImage}}" style="max-width: 200px; max-height: 300px;"/></td>
+                            <td>
+                                <button type="button" class="btn btn-outline-warning active" (click)="Edit(item)"><i class="cui-pencil icons font-2xl d-block"></i></button>
+                                <button type="button" class="btn btn-outline-danger active" (click)="Delete(item.id)"> <i class="cui-trash icons font-2xl d-block"></i></button>                                          
+                            </td>
+                        </tr>                                
+                    </tbody>
+                </table>
+            </div>            
+        </div>
+    </div>
+</div>
+
+<div bsModal #pacienteModal="bs-modal"  class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document" *ngIf="newPatient">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Cadastrar Paciente</h4>
+                <button type="button" class="close" (click)="pacienteModal.hide()" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group row">
+                    <label class="col-md-3 col-form-label">Id do Paciente</label>
+                    <div class="col-md-9">
+                        <input type="text" class="form-control" [(ngModel)]="newPatient.patientId" placeholder="Id do Paciente">
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-md-3 col-form-label" for="text-input">Data do Exame</label>
+                    <div class="col-md-9">
+                        <input class="form-control" type="text" placeholder="Data do Exame" [(ngModel)]="newPatient.imageDate">                            
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-md-3 col-form-label" for="text-input">MTA Direito</label>
+                    <div class="col-md-9">
+                        <input class="form-control" type="number" placeholder="MTA Direito" [(ngModel)]="newPatient.mtaRight">                            
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label class="col-md-3 col-form-label" for="text-input">MTA Esquerdo</label>
+                    <div class="col-md-9">
+                        <input class="form-control" type="number" placeholder="MTA Esquerdo" [(ngModel)]="newPatient.mtaLeft">                             
+                    </div>
+                </div>
+                <div class="form-group row">             
+                    <div class="form-group col-sm-12">
+                        <button type="button" class="btn btn-primary" (click)="OpenUploadModal(imageAttachRight)">Imagem MTA Direito</button>
+                        <input hidden type="file" #imageAttachRight accept="image/*" (change)="onFileChange($event, 'R')">                    
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="form-group col-sm-9">
+                        <img src="{{newPatient.mtaRightImage}}" style="max-width: 300px;" />
+                        <button type="button" *ngIf="newPatient.mtaRightImage" class="btn btn-primary" (click)="newPatient.mtaRightImage=''">Excluir</button>
+                    </div>  
+                </div> 
+                <div class="form-group row">             
+                    <div class="form-group col-sm-12">
+                        <button type="button" class="btn btn-primary" (click)="OpenUploadModal(imageAttachLeft)">Imagem MTA Esquerdo</button>
+                        <input hidden type="file" #imageAttachLeft accept="image/*" (change)="onFileChange($event, 'L')">                    
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="form-group col-sm-9">
+                        <img src="{{newPatient.mtaLeftImage}}" style="max-width: 300px;" />
+                        <button type="button" *ngIf="newPatient.mtaLeftImage" class="btn btn-primary" (click)="newPatient.mtaLeftImage=''">Excluir</button>
+                    </div>  
+                </div>                 
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="FecharModal()">SAIR</button>
+                <button type="button" class="btn btn-primary" (click)="SalvarPaciente()">SALVAR</button>
+            </div>
+        </div>
+    </div>
+</div> 
