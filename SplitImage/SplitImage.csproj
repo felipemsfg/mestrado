@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Drawing.Common">
+      <HintPath>C:\Users\felipe\.nuget\packages\system.drawing.common\4.6.0-preview6.19303.8\ref\netstandard2.0\System.Drawing.Common.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29230.47
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mestrado", "Mestrado.csproj", "{32206410-18AF-4234-9077-E19CAA513780}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mestrado", "Mestrado.csproj", "{32206410-18AF-4234-9077-E19CAA513780}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SplitImage", "..\SplitImage\SplitImage.csproj", "{6DD43856-660F-4D00-B4B8-304922A46258}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SplitImageFramework", "..\SplitImageFramework\SplitImageFramework.csproj", "{4E01D66B-42CB-4242-A2E5-32B94AC04778}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{32206410-18AF-4234-9077-E19CAA513780}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{32206410-18AF-4234-9077-E19CAA513780}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{32206410-18AF-4234-9077-E19CAA513780}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DD43856-660F-4D00-B4B8-304922A46258}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DD43856-660F-4D00-B4B8-304922A46258}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DD43856-660F-4D00-B4B8-304922A46258}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DD43856-660F-4D00-B4B8-304922A46258}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E01D66B-42CB-4242-A2E5-32B94AC04778}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E01D66B-42CB-4242-A2E5-32B94AC04778}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E01D66B-42CB-4242-A2E5-32B94AC04778}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E01D66B-42CB-4242-A2E5-32B94AC04778}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
