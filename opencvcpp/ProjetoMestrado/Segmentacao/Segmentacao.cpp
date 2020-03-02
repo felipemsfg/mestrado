@@ -39,25 +39,87 @@ cv::Mat GetSquareImage(const cv::Mat& img, int target_width = 500)
     return square;
 }
 
+void hitmiss(cv::Mat& src, cv::Mat& dst, cv::Mat& kernel)
+{
+    CV_Assert(src.type() == CV_8U && src.channels() == 1);
+
+    cv::Mat k1 = (kernel == 1) / 255;
+    cv::Mat k2 = (kernel == -1) / 255;
+
+    cv::normalize(src, src, 0, 1, cv::NORM_MINMAX);
+
+    cv::Mat e1, e2;
+    cv::erode(src, e1, k1, cv::Point(-1, -1), 1, cv::BORDER_CONSTANT, cv::Scalar(0));
+    cv::erode(1 - src, e2, k2, cv::Point(-1, -1), 1, cv::BORDER_CONSTANT, cv::Scalar(0));
+    if (countNonZero(k2) <= 0) {
+        e2 = src;
+    }
+    dst = e1 & e2;
+}
+
+cv::Mat Skeleton(Mat & src) {
+    cv::threshold(src, src, 127, 255, cv::THRESH_BINARY);
+    cv::Mat skel(src.size(), CV_8UC1, cv::Scalar(0));
+    cv::Mat temp;
+    cv::Mat eroded;
+
+    cv::Mat element = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3));
+
+    bool done;
+    do
+    {
+        cv::erode(src, eroded, element);
+        cv::dilate(eroded, temp, element); // temp = open(img)
+        cv::subtract(src, temp, temp);
+        cv::bitwise_or(skel, temp, skel);
+        eroded.copyTo(src);
+
+        done = (cv::countNonZero(src) == 0);
+    } while (!done);
+
+    return skel;
+}
+
+cv::Mat SkeletonFromFile(std::string path) {
+    Mat src = imread(path);
+
+    cvtColor(src, src, cv::COLOR_BGR2GRAY);    
+    threshold(src, src, 127, 255, THRESH_BINARY);
+    Mat skel(src.size(), CV_8UC1, cv::Scalar(0));
+    Mat temp;
+    Mat eroded;
+
+    Mat element = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3));
+    
+    bool done;
+    do
+    {
+        cv::erode(src, eroded, element);
+        cv::dilate(eroded, temp, element); // temp = open(img)
+        cv::subtract(src, temp, temp);
+        cv::bitwise_or(skel, temp, skel);
+        eroded.copyTo(src);
+
+        done = (cv::countNonZero(src) == 0);
+    } while (!done);
+
+    return skel;
+}
+
+
 Mat Segmentar(std::string path)
 {
+    int size = 1500;
+    
     Mat src = imread(path);
-    src = GetSquareImage(src, 500);
+    src = GetSquareImage(src, size);
 
-    //if (src.empty())
-    //{
-    //    /*cout << "Could not open or find the image!\n" << endl;
-    //    cout << "Usage: " << argv[0] << " <Input image>" << endl;*/
-    //    return ;
-    //}
-
-    //imshow("1 - Original", src);
+    /*Rect crop((size / 8)*3, (size / 8)*3, size / 4, size / 4);
+    Mat src = origem(crop);*/
 
     for (int i = 0; i < src.rows; i++) {
         for (int j = 0; j < src.cols; j++) {
             double d = norm(src.at<Vec3b>(i, j));
-            //if (src.at<Vec3b>(i, j) >= Vec3b(255, 255, 255))
-            //printf("%2f\n", d);
             if (d >= 200)
             {
                 src.at<Vec3b>(i, j)[0] = 0;
@@ -66,89 +128,75 @@ Mat Segmentar(std::string path)
             }
         }
     }
-    //imshow("2 - Black Background Image", src);
-
-
-
-
-    // Create a kernel that we will use to sharpen our image
-    Mat kernel = (Mat_<float>(3, 3) <<
+    
+    Mat elementoEstruturante = (Mat_<float>(3, 3) <<
         1, 1, 1,
         1, -8, 1,
         1, 1, 1);
 
-    Mat imgLaplacian;
-    filter2D(src, imgLaplacian, CV_32F, kernel);
+    Mat laplaciano;
+    filter2D(src, laplaciano, CV_32F, elementoEstruturante);
     Mat sharp;
     src.convertTo(sharp, CV_32F);
-    Mat imgResult = sharp - imgLaplacian;
+    Mat imgResult = sharp - laplaciano;
 
     imgResult.convertTo(imgResult, CV_8UC3);
-    imgLaplacian.convertTo(imgLaplacian, CV_8UC3);
-    //imshow("3 - Laplaciano", imgResult);
-
-    // Create binary image from source image
+    laplaciano.convertTo(laplaciano, CV_8UC3);
+    
+    // Imagem binária
     Mat bw;
     cvtColor(src, bw, COLOR_BGR2GRAY);
     threshold(bw, bw, 40, 255, THRESH_BINARY | THRESH_OTSU);
-    //imshow("4 - Binary Image", bw);
-
-    // Perform the distance transform algorithm
+    
+    // distanceTransform
     Mat dist;
-    distanceTransform(bw, dist, DIST_L2, 3);
-    // Normalize the distance image for range = {0.0, 1.0}
-    // so we can visualize and threshold it
+    distanceTransform(bw, dist, DIST_L2, 3);    
     normalize(dist, dist, 0, 1.0, NORM_MINMAX);
-    //imshow("5 - Distance Transform Image", dist);
-
-    // Threshold to obtain the peaks
-    // This will be the markers for the foreground objects
+    
+    // Identificação dos picos
     threshold(dist, dist, 0.4, 1.0, THRESH_BINARY);
 
-    // Dilate a bit the dist image
-    Mat kernel1 = Mat::ones(3, 3, CV_8U);
-    dilate(dist, dist, kernel1);
-    //imshow("6 - Peaks", dist);
-
-    // Create the CV_8U version of the distance image
-    // It is needed for findContours()
+    // Dilatação
+    Mat elementoEstruturante2 = Mat::ones(3, 3, CV_8U);
+    dilate(dist, dist, elementoEstruturante2);
+    
+    // Identificação dos contornos e marcação dos marcadores
     Mat dist_8u;
     dist.convertTo(dist_8u, CV_8U);
-
-    // Find total markers
     vector<vector<Point> > contours;
     findContours(dist_8u, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-    // Create the marker image for the watershed algorithm
     Mat markers = Mat::zeros(dist.size(), CV_32S);
-    // Draw the foreground markers
     for (size_t i = 0; i < contours.size(); i++)
     {
         drawContours(markers, contours, static_cast<int>(i), Scalar(static_cast<int>(i) + 1), -1);
     }
-    // Draw the background marker
     circle(markers, Point(5, 5), 3, Scalar(255), -1);
-    //imshow("Markers", markers);
-    // Perform the watershed algorithm    
+        
+    // Watershed
     watershed(imgResult, markers);
-
-
+    
     Mat mark;
     markers.convertTo(mark, CV_8U);
     bitwise_not(mark, mark);
-    //imshow("Markers_v2", mark); // uncomment this if you want to see how the mark
-    // image looks like at that point
-    // Generate random colors
+    // imshow("mark", mark);
+
+    
+    // Gera cores aleatórias
     vector<Vec3b> colors;
     for (size_t i = 0; i < contours.size(); i++)
     {
-        int b = theRNG().uniform(0, 256);
+        /*int b = theRNG().uniform(0, 256);
         int g = theRNG().uniform(0, 256);
-        int r = theRNG().uniform(0, 256);
+        int r = theRNG().uniform(0, 256);*/
+        // Gera todas as cores brancas para não mudar a etapa de colorir (próxima)
+        int b = 255;
+        int g = 255;
+        int r = 255;
         colors.push_back(Vec3b((uchar)b, (uchar)g, (uchar)r));
     }
-    // Create the result image
+    
+    // Imagem final colorida ou imagem branca com linhas pretas
     Mat dst = Mat::zeros(markers.size(), CV_8UC3);
-    // Fill labeled objects with random colors
     for (int i = 0; i < markers.rows; i++)
     {
         for (int j = 0; j < markers.cols; j++)
@@ -160,10 +208,53 @@ Mat Segmentar(std::string path)
             }
         }
     }
-    // Visualize the final image
-    //imshow("Final Result", dst);
-    return dst;
+
+    Mat greyMat;
+    cvtColor(dst, greyMat, cv::COLOR_BGR2GRAY);
+    threshold(greyMat, greyMat, 150, 255, THRESH_BINARY );
+    
+    // Recorto a imagem para pegar somente a área de interesse 
+    Rect crop((size / 10)*4.5, (size / 10)*4, (size / 10) * 1.2, (size / 10));
+    greyMat = greyMat(crop);
+
+    // Hit or Miss
+    Mat kernel = (Mat_<int>(13, 18) <<
+        1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0,
+        0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0,
+        0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+        0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+        0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
+        );
+
+    
+
+    //Mat1b kernel = imread("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\skeleto2.png", IMREAD_GRAYSCALE);
+    Mat output_image;
+    morphologyEx(greyMat, output_image, MORPH_HITMISS, kernel);
+
+    const int rate = 1;
+    kernel = (kernel + 1) * 127;
+    kernel.convertTo(kernel, CV_8U);
+    resize(kernel, kernel, Size(), rate, rate, INTER_NEAREST);
+    // imshow("kernel", kernel);
+    resize(greyMat, greyMat, Size(), rate, rate, INTER_NEAREST);
+    resize(output_image, output_image, Size(), rate, rate, INTER_NEAREST);
+    
+    /*Mat skel = Skeleton(greyMat);
+    imshow("skel", skel);*/
+    return output_image;
+    // return skel;
 }
+
+
 
 int main(int argc, char* argv[])
 {
@@ -177,19 +268,26 @@ int main(int argc, char* argv[])
         "E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\0045527F 2013-01-23.png"
     };*/
 
+//    Mat skeleton = imread("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\completo.png");
+
+    //Mat skeleton = SkeletonFromFile("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\completo.png");
+    //imshow("oba", skeleton);
+//    imwrite("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\skeleto.png", skeleton);
+
 
     std::ifstream file("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\000-list.txt");
     std::string str;
     while (std::getline(file, str))
-    {
+    {       
         // Process str
         /*std::cout << str << std::endl;*/
         Mat result = Segmentar(str);
-        imshow("result " + str, result);
-    }
-        
+        //Mat result = Segmentar("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\completo.png");
+        imshow("result " + str, result);      
 
-    
+
+    }
+
     waitKey();
     return 0;
 }
