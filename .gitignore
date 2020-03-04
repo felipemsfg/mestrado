@@ -122,11 +122,11 @@ dist
 mono_crash.*
 
 # Build results
-[Dd]ebug/
+#[Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
-x64/
+#x64/
 x86/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
@@ -454,3 +454,9 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 teste/000-list.txt
+
+opencvcpp/ProjetoMestrado/Segmentacao/Debug/
+
+opencvcpp/ProjetoMestrado/Segmentacao/x64/
+
+opencvcpp/ProjetoMestrado/Debug/

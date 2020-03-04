@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.IO;
 
 namespace Auxiliar
 {
@@ -11,11 +6,12 @@ namespace Auxiliar
     {
         static void Main(string[] args)
         {
-            DirectoryInfo di = new DirectoryInfo(@"E:\Google Drive\Mestrado\52 - Base de imagens\teste");
-            FileInfo[] files = di.GetFiles("*.png");
+            const string driverLetter = "E";
+            var di = new DirectoryInfo($@"{driverLetter}:\Code\felipemsfg.github.com\mestrado\opencvcpp\ProjetoMestrado\x64\Debug\imagens");
+            var files = di.GetFiles("*.png");
 
-            using (System.IO.StreamWriter file =
-                new System.IO.StreamWriter(@"E:\Google Drive\Mestrado\52 - Base de imagens\teste\000-list.txt", true))
+            using (var file =
+                new StreamWriter($@"{driverLetter}:\Code\felipemsfg.github.com\mestrado\opencvcpp\ProjetoMestrado\x64\Debug\imagens\000-list.txt", true))
             {
                 foreach (var fileInfo in files)
                 {

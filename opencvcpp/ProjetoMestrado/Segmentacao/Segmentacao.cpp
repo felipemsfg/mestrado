@@ -2,12 +2,28 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <iostream>
+#include<opencv2/opencv.hpp>
 #include <fstream>
 #include <string>
 #include <filesystem>
 using namespace std;
 using namespace cv;
 
+std::string random_string(size_t length)
+{
+    auto randchar = []() -> char
+    {
+        const char charset[] =
+            "0123456789"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz";
+        const size_t max_index = (sizeof(charset) - 1);
+        return charset[rand() % max_index];
+    };
+    std::string str(length, 0);
+    std::generate_n(str.begin(), length, randchar);
+    return str;
+}
 
 cv::Mat GetSquareImage(const cv::Mat& img, int target_width = 500)
 {
@@ -107,15 +123,12 @@ cv::Mat SkeletonFromFile(std::string path) {
 }
 
 
-Mat Segmentar(std::string path)
+Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::string resultPath, bool saveResult)
 {
-    int size = 1500;
+    int size = 1000;
     
     Mat src = imread(path);
     src = GetSquareImage(src, size);
-
-    /*Rect crop((size / 8)*3, (size / 8)*3, size / 4, size / 4);
-    Mat src = origem(crop);*/
 
     for (int i = 0; i < src.rows; i++) {
         for (int j = 0; j < src.cols; j++) {
@@ -178,20 +191,26 @@ Mat Segmentar(std::string path)
     Mat mark;
     markers.convertTo(mark, CV_8U);
     bitwise_not(mark, mark);
-    // imshow("mark", mark);
-
-    
+       
     // Gera cores aleatórias
     vector<Vec3b> colors;
     for (size_t i = 0; i < contours.size(); i++)
     {
-        /*int b = theRNG().uniform(0, 256);
-        int g = theRNG().uniform(0, 256);
-        int r = theRNG().uniform(0, 256);*/
-        // Gera todas as cores brancas para não mudar a etapa de colorir (próxima)
-        int b = 255;
-        int g = 255;
-        int r = 255;
+        int b=0;
+        int g=0;
+        int r=0;
+
+        if (color == true) {
+            b = theRNG().uniform(0, 256);
+            g = theRNG().uniform(0, 256);
+            r = theRNG().uniform(0, 256);
+        }
+        else {
+            // Gera todas as cores brancas para não mudar a etapa de colorir (próxima)
+            b = 255;
+            g = 255;
+            r = 255;
+        }
         colors.push_back(Vec3b((uchar)b, (uchar)g, (uchar)r));
     }
     
@@ -214,8 +233,10 @@ Mat Segmentar(std::string path)
     threshold(greyMat, greyMat, 150, 255, THRESH_BINARY );
     
     // Recorto a imagem para pegar somente a área de interesse 
-    Rect crop((size / 10)*4.5, (size / 10)*4, (size / 10) * 1.2, (size / 10));
-    greyMat = greyMat(crop);
+    if (doCrop == true) {
+        Rect crop((size / 10) * 2.5, (size / 10) * 2.5, (size / 10) * 5, (size / 10) * 5);
+        greyMat = greyMat(crop);
+    }
 
     // Hit or Miss
     Mat kernel = (Mat_<int>(13, 18) <<
@@ -234,7 +255,12 @@ Mat Segmentar(std::string path)
         0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
         );
 
-    
+    if (cropDst == true) {
+        Rect cropDstRec((size / 10) * 2.5, (size / 10) * 2.5, (size / 10) * 5, (size / 10) * 5);
+        dst = dst(cropDstRec);
+    }
+
+    imshow("watershed " + path, dst);
 
     //Mat1b kernel = imread("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\skeleto2.png", IMREAD_GRAYSCALE);
     Mat output_image;
@@ -250,6 +276,13 @@ Mat Segmentar(std::string path)
     
     /*Mat skel = Skeleton(greyMat);
     imshow("skel", skel);*/
+
+    if (saveResult == true) {
+        std::string fileNamePrefix = random_string(14);
+        imwrite(resultPath + fileNamePrefix + "_watershed.png", dst);
+        imwrite(resultPath + fileNamePrefix + "_hitormiss.png", output_image);
+    }
+
     return output_image;
     // return skel;
 }
@@ -258,34 +291,14 @@ Mat Segmentar(std::string path)
 
 int main(int argc, char* argv[])
 {
-    //Mat src = imread("E:\\Google Drive\\Mestrado\\33 - Watershed - emgucv\\water_coins.jpg");
- /*   string path[6] = {
-        "E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\0007275H 2013-09-18.png",
-        "E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\0006091H 2015-03-21.png",
-        "E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\0014459K 2013-09-25.png",
-        "E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\0016892B 2013-07-17.png",
-        "E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\0030456K 2017-08-30.png",
-        "E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\0045527F 2013-01-23.png"
-    };*/
-
-//    Mat skeleton = imread("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\completo.png");
-
-    //Mat skeleton = SkeletonFromFile("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\completo.png");
-    //imshow("oba", skeleton);
-//    imwrite("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\skeleto.png", skeleton);
-
-
-    std::ifstream file("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\000-list.txt");
+    std::string imageFilePath = "E:\\Code\\felipemsfg.github.com\\mestrado\\opencvcpp\\ProjetoMestrado\\x64\\Debug\\imagens\\000-list.txt";
+    std::string saveResultFolder = "E:\\Code\\felipemsfg.github.com\\mestrado\\opencvcpp\\ProjetoMestrado\\x64\\Debug\\imagens\\result\\";
+    std::ifstream file(imageFilePath);
     std::string str;
     while (std::getline(file, str))
     {       
-        // Process str
-        /*std::cout << str << std::endl;*/
-        Mat result = Segmentar(str);
-        //Mat result = Segmentar("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\completo.png");
-        imshow("result " + str, result);      
-
-
+        Mat result = Segmentar(str, true, true, true, saveResultFolder, true);
+        imshow("hit or miss " + str, result);      
     }
 
     waitKey();
@@ -293,74 +306,4 @@ int main(int argc, char* argv[])
 }
 
 
-
-#include<opencv2/opencv.hpp>
-#include<iostream>
-//using namespace std;
-//using namespace cv;
-//int main()
-//{
-//    Mat img = imread("E:\\Google Drive\\Mestrado\\33 - Watershed - emgucv\\water_coins.jpg");
-//    //Mat img = imread("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\0045527F 2013-01-23.png");
-//
-//    Mat gray;
-//    cvtColor(img, gray, COLOR_BGR2GRAY);
-//    imshow("Gray", gray);
-//
-//    Mat thresh;
-//    threshold(gray, thresh, 0, 255, THRESH_BINARY_INV + THRESH_OTSU);
-//    imshow("Threshold", thresh);
-//
-//    // noise removal
-//    Mat opening;
-//    Mat kernel = getStructuringElement(MORPH_RECT, Size(3, 3));
-//    morphologyEx(thresh, opening, MORPH_OPEN, kernel, Point(-1,-1), 2);
-//    imshow("noise removal", opening);
-//
-//    Mat sure_bg;
-//    dilate(opening, sure_bg, kernel, Point(-1, -1), 3);
-//    imshow("Surebg", sure_bg);
-//
-//    Mat distance;
-//    distanceTransform(opening, distance, DIST_L2, 5);
-//    normalize(distance, distance, 0, 1.0, NORM_MINMAX);
-//    imshow("Distance Transform Image", distance);
-//    
-//    double max, min;
-//    minMaxLoc(distance, &min, &max);
-//
-//    Mat sure_fg;
-//    threshold(distance, sure_fg, max * 0.7, 255, 0);
-//    imshow("Threshold Distance", distance);
-//
-//    Mat unknown;
-//    subtract(sure_bg, sure_fg, unknown);
-//    imshow("Unknown", unknown);
-//
-//    /*namedWindow("image", WINDOW_NORMAL);
-//    imshow("image", distance);*/
-//    waitKey(0);
-//    return 0;
-//
-//}
-//// Segmentacao.cpp : This file contains the 'main' function. Program execution begins and ends there.
-////
-//
-//#include <iostream>
-//
-//int main()
-//{
-//    std::cout << "Hello World!\n";
-//}
-//
-//// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-//// Debug program: F5 or Debug > Start Debugging menu
-//
-//// Tips for Getting Started: 
-////   1. Use the Solution Explorer window to add/manage files
-////   2. Use the Team Explorer window to connect to source control
-////   3. Use the Output window to see build output and other messages
-////   4. Use the Error List window to view errors
-////   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-////   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
 
