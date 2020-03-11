@@ -127,7 +127,7 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     int size = 1000;
     
     Mat src = imread(path);
-    src = GetSquareImage(src, size);
+    // src = GetSquareImage(src, size);
     imshow("original" + std::to_string(count), src);
     for (int i = 0; i < src.rows; i++) {
         for (int j = 0; j < src.cols; j++) {
@@ -263,10 +263,10 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     threshold(greyMat, greyMat, 150, 255, THRESH_BINARY );
     
     // Recorto a imagem para pegar somente a área de interesse 
-    if (doCrop == true) {
+   /* if (doCrop == true) {
         Rect crop((size / 10) * 2.5, (size / 10) * 2.5, (size / 10) * 5, (size / 10) * 5);
         greyMat = greyMat(crop);
-    }
+    }*/
 
     // Hit or Miss
     Mat kernel = (Mat_<int>(13, 18) <<
@@ -317,16 +317,16 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     // return skel;
 }
 
-Mat RemoverFundo(std::string path, bool color, bool doCrop, bool cropDst, std::string resultPath, bool saveResult, int count)
+Mat RemoverFundo(std::string path)
 {
-    int size = 1000;
+    //int size = 1000;
     Mat elementoEstruturante = (Mat_<float>(3, 3) <<
         1, 1, 1,
         1, -8, 1,
         1, 1, 1);
     
     Mat src = imread(path);
-    src = GetSquareImage(src, size);
+    //src = GetSquareImage(src, size);
 
     Mat src2 ;
     src.copyTo(src2);
@@ -355,6 +355,7 @@ Mat RemoverFundo(std::string path, bool color, bool doCrop, bool cropDst, std::s
 
     Mat temp;
     erode(src, temp, elementoEstruturante);
+    erode(temp, temp, elementoEstruturante);
 
     for (int i = 0; i < temp.rows; i++) {
         for (int j = 0; j < temp.cols; j++) {
@@ -409,13 +410,16 @@ int main(int argc, char* argv[])
     while (std::getline(file, str))
     {       
         //Mat result = Segmentar(str, true, false, true, saveResultFolder, true, count);
-        Mat result = RemoverFundo(str, true, false, true, saveResultFolder, true, count);
+        Mat result = RemoverFundo(str);
+
         //imshow("hit or miss " + std::to_string(count), result);
+        
         imwrite(str + "_sem_fundo.png", result);
+        cout << std::to_string(count) + " - " + str + "\n";
         count++;
     }
 
-    // waitKey();
+    //waitKey();
     return 0;
 }
 
