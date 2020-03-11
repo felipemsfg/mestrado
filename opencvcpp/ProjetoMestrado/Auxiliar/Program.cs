@@ -7,7 +7,7 @@ namespace Auxiliar
         static void Main(string[] args)
         {
             const string driverLetter = "E";
-            var di = new DirectoryInfo($@"{driverLetter}:\Code\felipemsfg.github.com\mestrado\opencvcpp\ProjetoMestrado\x64\Debug\imagens");
+            var di = new DirectoryInfo($@"{driverLetter}:\Code\felipemsfg.github.com\mestrado\opencvcpp\ProjetoMestrado\x64\Debug\imagens_por_tipo\COR_V3DT1_preGado");
             var files = di.GetFiles("*.png");
 
             using (var file =
