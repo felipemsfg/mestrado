@@ -127,26 +127,26 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     int size = 1000;
     
     Mat src = imread(path);
-    // src = GetSquareImage(src, size);
-    imshow("original" + std::to_string(count), src);
+    src = GetSquareImage(src, size);
+    //imshow("original" + std::to_string(count), src);
     for (int i = 0; i < src.rows; i++) {
         for (int j = 0; j < src.cols; j++) {
             double d = norm(src.at<Vec3b>(i, j));
-            if (d < 200)
+            if (d >= 200)
             {
                 src.at<Vec3b>(i, j)[0] = 0;
                 src.at<Vec3b>(i, j)[1] = 0;
                 src.at<Vec3b>(i, j)[2] = 0;
             }
-            else {
+            /*else {
                 src.at<Vec3b>(i, j)[0] = 255;
                 src.at<Vec3b>(i, j)[1] = 255;
                 src.at<Vec3b>(i, j)[2] = 255;
-            }
+            }*/
         }
     }
 
-    imshow("originaleditada" + std::to_string(count), src);
+    //imshow("originaleditada" + std::to_string(count), src);
     
     Mat elementoEstruturante = (Mat_<float>(3, 3) << 
         1, 1, 1, 
@@ -158,35 +158,38 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     filter2D(src, laplaciano, CV_32F, elementoEstruturante);    
     src.convertTo(sharp, CV_32F);
     imshow("sharp" + std::to_string(count), sharp);
+    imwrite(path + "_sharp.png", sharp);
     Mat imgResult = sharp - laplaciano;
 
     imgResult.convertTo(imgResult, CV_8UC3);
     imshow("sharp-laplaciano" + std::to_string(count), imgResult);
+    imwrite(path + "_sharp-laplaciano.png", imgResult);
     laplaciano.convertTo(laplaciano, CV_8UC3);
     imshow("laplaciano" + std::to_string(count), laplaciano);
-
+    imwrite(path + "_laplaciano.png", laplaciano);
 
     // Imagem binária
     Mat bw;
     cvtColor(imgResult, bw, COLOR_BGR2GRAY);
     threshold(bw, bw, 40, 255, THRESH_BINARY | THRESH_OTSU);
     imshow("imagem binaria" + std::to_string(count), bw);
+    imwrite(path + "_img-binaria.png", bw);
 
     // Dilatação
-    Mat dilatacao;
+    Mat fechamento;
     Mat elementoEstruturante3 = Mat::ones(3, 3, CV_8U);
-    morphologyEx(bw, dilatacao,MORPH_CLOSE, elementoEstruturante);
+    morphologyEx(bw, fechamento,MORPH_CLOSE, elementoEstruturante);
 
     /*dilate(bw, dilatacao, elementoEstruturante3);
     erode(dilatacao, dilatacao, elementoEstruturante3);
     erode(dilatacao, dilatacao, elementoEstruturante3);
     dilate(dilatacao, dilatacao, elementoEstruturante3);*/
-    imshow("dilatacao" + std::to_string(count), dilatacao);
-
+    imshow("fechamento" + std::to_string(count), fechamento);
+    imwrite(path + "_fechamento.png", fechamento);
 
     // distanceTransform
     Mat dist;
-    distanceTransform(dilatacao, dist, DIST_L2, 3);    
+    distanceTransform(fechamento, dist, DIST_L2, 3);
     normalize(dist, dist, 0, 1.0, NORM_MINMAX);
     
     // Identificação dos picos
@@ -196,7 +199,9 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     Mat elementoEstruturante2 = Mat::ones(3, 3, CV_8U);
     dilate(dist, dist, elementoEstruturante);
     dilate(dist, dist, elementoEstruturante);
-    imshow("dilatacao-dist" + std::to_string(count), dist);
+    imshow("dilatacao dist" + std::to_string(count), dist);
+    imwrite(path + "_dilatacao_dist.png", dist);
+
     //erode(dist, dist, elementoEstruturante);
     //imshow("erosao", dist);
 
@@ -204,10 +209,10 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     Mat dist_8u;
     dist.convertTo(dist_8u, CV_8U);
     dilate(dist_8u, dist_8u, elementoEstruturante2);
-    imshow("dist_8u" + std::to_string(count), dist_8u);
+    // imshow("dist_8u" + std::to_string(count), dist_8u);
 
     vector<vector<Point> > contours;
-    findContours(dist_8u, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    findContours(dist_8u, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
     Mat markers = Mat::zeros(dist.size(), CV_32S);
     for (size_t i = 0; i < contours.size(); i++)
     {
@@ -218,6 +223,7 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     // Watershed
     watershed(imgResult, markers);
     
+
     Mat mark;
     markers.convertTo(mark, CV_8U);
     bitwise_not(mark, mark);
@@ -291,6 +297,7 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     //}
 
     imshow("watershed" + std::to_string(count), dst);
+    imwrite(path + "_watershed.png", dst);
 
     //Mat1b kernel = imread("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\skeleto2.png", IMREAD_GRAYSCALE);
     Mat output_image;
@@ -409,17 +416,17 @@ int main(int argc, char* argv[])
     int count = 0;
     while (std::getline(file, str))
     {       
-        //Mat result = Segmentar(str, true, false, true, saveResultFolder, true, count);
-        Mat result = RemoverFundo(str);
+        Mat result = Segmentar(str, true, false, true, saveResultFolder, true, count);
+        //Mat result = RemoverFundo(str);
 
-        //imshow("hit or miss " + std::to_string(count), result);
+        imshow("hit or miss " + std::to_string(count), result);
         
-        imwrite(str + "_sem_fundo.png", result);
+        imwrite(str + "_hit-or-miss.png", result);
         cout << std::to_string(count) + " - " + str + "\n";
         count++;
     }
 
-    //waitKey();
+    waitKey();
     return 0;
 }
 
