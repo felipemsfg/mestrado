@@ -122,6 +122,69 @@ cv::Mat SkeletonFromFile(std::string path) {
     return skel;
 }
 
+void MyLine(Mat img, Point start, Point end)
+{
+    int thickness = 2;
+    int lineType = LINE_8;
+    line(img,
+        start,
+        end,
+        Scalar(255, 100, 50),
+        thickness,
+        lineType);
+}
+
+Mat Hough(std::string path) 
+{
+    Mat img, gray;
+    img = imread(path);
+    img = GetSquareImage(img, 1000);
+    cvtColor(img, gray, COLOR_BGR2GRAY);
+    // smooth it, otherwise a lot of false circles may be detected
+    GaussianBlur(gray, gray, Size(9, 9), 2, 2);
+    //imshow("gaussian", gray);
+    vector<Vec3f> circles;
+    HoughCircles(gray, circles, HOUGH_GRADIENT,
+        2, gray.rows / 8, 5 , 24, 50 , 80);
+
+    Point maiorCentro = Point(0,0);
+    int maiorRaio = 0;
+
+    Point maisAoCentro = Point(0, 0);
+    int raio = 0;
+    int diferenca = img.cols;
+    for (size_t i = 0; i < circles.size(); i++)
+    {
+        Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+        int radius = cvRound(circles[i][2]);
+
+        if (radius > maiorRaio) {
+            maiorCentro = center;
+            maiorRaio = radius;
+        }
+
+        if (abs(img.cols / 2 - circles[i][0]) < diferenca) {
+            diferenca = abs((img.cols / 2) - circles[i][0]);
+            raio = radius;
+            maisAoCentro = center;
+        }
+
+        // draw the circle center
+        circle(img, center, 3, Scalar(0, 255, 0), -1, 8, 0);
+        // draw the circle outline
+        circle(img, center, radius, Scalar(0, 0, 255), 1, 8, 0);
+    }
+
+    /*circle(img, maiorCentro, maiorRaio, Scalar(0, 255, 255), 3, 8, 0);
+    circle(img, maisAoCentro, raio, Scalar(255, 255, 255), 3, 8, 0);*/
+
+    MyLine(img, Point(img.rows/2, 0), Point(img.rows/2, img.cols ));
+    //namedWindow("circles", 1);
+    //imshow("circles", img);
+    imwrite(path + "circles.png", img);
+    return img;
+}
+
 Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::string resultPath, bool saveResult, int count)
 {
     int size = 1000;
@@ -157,23 +220,40 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     Mat sharp;
     filter2D(src, laplaciano, CV_32F, elementoEstruturante);    
     src.convertTo(sharp, CV_32F);
-    imshow("sharp" + std::to_string(count), sharp);
+    //imshow("sharp" + std::to_string(count), sharp);
     imwrite(path + "_sharp.png", sharp);
     Mat imgResult = sharp - laplaciano;
+    //Hough(path + "_sharp.png");
+
 
     imgResult.convertTo(imgResult, CV_8UC3);
-    imshow("sharp-laplaciano" + std::to_string(count), imgResult);
+    //imshow("sharp-laplaciano" + std::to_string(count), imgResult);
     imwrite(path + "_sharp-laplaciano.png", imgResult);
     laplaciano.convertTo(laplaciano, CV_8UC3);
-    imshow("laplaciano" + std::to_string(count), laplaciano);
+    //imshow("laplaciano" + std::to_string(count), laplaciano);
+    
+    // dilate(laplaciano, laplaciano, elementoEstruturante);
+
     imwrite(path + "_laplaciano.png", laplaciano);
+
+
+    Mat inverted = ~laplaciano;
+    //imshow("inverted" + std::to_string(count), inverted);
+    imwrite(path + "_inverted.png", inverted);
+    
+    Hough(path + "_laplaciano.png");
+    
+    
+    //imshow("Hough Circle Transform Demo", src);
+
 
     // Imagem binária
     Mat bw;
     cvtColor(imgResult, bw, COLOR_BGR2GRAY);
     threshold(bw, bw, 40, 255, THRESH_BINARY | THRESH_OTSU);
-    imshow("imagem binaria" + std::to_string(count), bw);
+    //imshow("imagem binaria" + std::to_string(count), bw);
     imwrite(path + "_img-binaria.png", bw);
+    
 
     // Dilatação
     Mat fechamento;
@@ -184,7 +264,7 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     erode(dilatacao, dilatacao, elementoEstruturante3);
     erode(dilatacao, dilatacao, elementoEstruturante3);
     dilate(dilatacao, dilatacao, elementoEstruturante3);*/
-    imshow("fechamento" + std::to_string(count), fechamento);
+    //imshow("fechamento" + std::to_string(count), fechamento);
     imwrite(path + "_fechamento.png", fechamento);
 
     // distanceTransform
@@ -199,7 +279,7 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     Mat elementoEstruturante2 = Mat::ones(3, 3, CV_8U);
     dilate(dist, dist, elementoEstruturante);
     dilate(dist, dist, elementoEstruturante);
-    imshow("dilatacao dist" + std::to_string(count), dist);
+    //imshow("dilatacao dist" + std::to_string(count), dist);
     imwrite(path + "_dilatacao_dist.png", dist);
 
     //erode(dist, dist, elementoEstruturante);
@@ -296,7 +376,7 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     //    dst = dst(cropDstRec);
     //}
 
-    imshow("watershed" + std::to_string(count), dst);
+    //imshow("watershed" + std::to_string(count), dst);
     imwrite(path + "_watershed.png", dst);
 
     //Mat1b kernel = imread("E:\\Google Drive\\Mestrado\\52 - Base de imagens\\teste\\elementoestruturante\\skeleto2.png", IMREAD_GRAYSCALE);
@@ -417,9 +497,10 @@ int main(int argc, char* argv[])
     while (std::getline(file, str))
     {       
         Mat result = Segmentar(str, true, false, true, saveResultFolder, true, count);
-        //Mat result = RemoverFundo(str);
+        // Mat result = RemoverFundo(str);
+        //Mat result = Hough(str);
 
-        imshow("hit or miss " + std::to_string(count), result);
+        //imshow("hit or miss " + std::to_string(count), result);
         
         imwrite(str + "_hit-or-miss.png", result);
         cout << std::to_string(count) + " - " + str + "\n";
