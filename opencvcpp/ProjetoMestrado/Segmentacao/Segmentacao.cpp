@@ -6,8 +6,17 @@
 #include <fstream>
 #include <string>
 #include <filesystem>
+#include "Base.h"
+#include "Altura.h"
+#include "RegionOfInterest.h"
+#include "Skeleton.h"
+#include "TratarFundo.h"
+#include "Hough.h"
+
 using namespace std;
 using namespace cv;
+using namespace Mestrado;
+
 
 std::string random_string(size_t length)
 {
@@ -23,36 +32,6 @@ std::string random_string(size_t length)
     std::string str(length, 0);
     std::generate_n(str.begin(), length, randchar);
     return str;
-}
-
-cv::Mat GetSquareImage(const cv::Mat& img, int target_width = 500)
-{
-    int width = img.cols,
-        height = img.rows;
-
-    cv::Mat square = cv::Mat::zeros(target_width, target_width, img.type());
-
-    int max_dim = (width >= height) ? width : height;
-    float scale = ((float)target_width) / max_dim;
-    cv::Rect roi;
-    if (width >= height)
-    {
-        roi.width = target_width;
-        roi.x = 0;
-        roi.height = height * scale;
-        roi.y = (target_width - roi.height) / 2;
-    }
-    else
-    {
-        roi.y = 0;
-        roi.height = target_width;
-        roi.width = width * scale;
-        roi.x = (target_width - roi.width) / 2;
-    }
-
-    cv::resize(img, square(roi), roi.size());
-
-    return square;
 }
 
 void hitmiss(cv::Mat& src, cv::Mat& dst, cv::Mat& kernel)
@@ -73,124 +52,12 @@ void hitmiss(cv::Mat& src, cv::Mat& dst, cv::Mat& kernel)
     dst = e1 & e2;
 }
 
-cv::Mat Skeleton(Mat & src) {
-    cv::threshold(src, src, 127, 255, cv::THRESH_BINARY);
-    cv::Mat skel(src.size(), CV_8UC1, cv::Scalar(0));
-    cv::Mat temp;
-    cv::Mat eroded;
-
-    cv::Mat element = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3));
-
-    bool done;
-    do
-    {
-        cv::erode(src, eroded, element);
-        cv::dilate(eroded, temp, element); // temp = open(img)
-        cv::subtract(src, temp, temp);
-        cv::bitwise_or(skel, temp, skel);
-        eroded.copyTo(src);
-
-        done = (cv::countNonZero(src) == 0);
-    } while (!done);
-
-    return skel;
-}
-
-cv::Mat SkeletonFromFile(std::string path) {
-    Mat src = imread(path);
-
-    cvtColor(src, src, cv::COLOR_BGR2GRAY);    
-    threshold(src, src, 127, 255, THRESH_BINARY);
-    Mat skel(src.size(), CV_8UC1, cv::Scalar(0));
-    Mat temp;
-    Mat eroded;
-
-    Mat element = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3));
-    
-    bool done;
-    do
-    {
-        cv::erode(src, eroded, element);
-        cv::dilate(eroded, temp, element); // temp = open(img)
-        cv::subtract(src, temp, temp);
-        cv::bitwise_or(skel, temp, skel);
-        eroded.copyTo(src);
-
-        done = (cv::countNonZero(src) == 0);
-    } while (!done);
-
-    return skel;
-}
-
-void MyLine(Mat img, Point start, Point end)
-{
-    int thickness = 2;
-    int lineType = LINE_8;
-    line(img,
-        start,
-        end,
-        Scalar(255, 100, 50),
-        thickness,
-        lineType);
-}
-
-Mat Hough(std::string path) 
-{
-    Mat img, gray;
-    img = imread(path);
-    img = GetSquareImage(img, 1000);
-    cvtColor(img, gray, COLOR_BGR2GRAY);
-    // smooth it, otherwise a lot of false circles may be detected
-    GaussianBlur(gray, gray, Size(9, 9), 2, 2);
-    //imshow("gaussian", gray);
-    vector<Vec3f> circles;
-    HoughCircles(gray, circles, HOUGH_GRADIENT,
-        2, gray.rows / 8, 5 , 24, 50 , 80);
-
-    Point maiorCentro = Point(0,0);
-    int maiorRaio = 0;
-
-    Point maisAoCentro = Point(0, 0);
-    int raio = 0;
-    int diferenca = img.cols;
-    for (size_t i = 0; i < circles.size(); i++)
-    {
-        Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-        int radius = cvRound(circles[i][2]);
-
-        if (radius > maiorRaio) {
-            maiorCentro = center;
-            maiorRaio = radius;
-        }
-
-        if (abs(img.cols / 2 - circles[i][0]) < diferenca) {
-            diferenca = abs((img.cols / 2) - circles[i][0]);
-            raio = radius;
-            maisAoCentro = center;
-        }
-
-        // draw the circle center
-        circle(img, center, 3, Scalar(0, 255, 0), -1, 8, 0);
-        // draw the circle outline
-        circle(img, center, radius, Scalar(0, 0, 255), 1, 8, 0);
-    }
-
-    /*circle(img, maiorCentro, maiorRaio, Scalar(0, 255, 255), 3, 8, 0);
-    circle(img, maisAoCentro, raio, Scalar(255, 255, 255), 3, 8, 0);*/
-
-    MyLine(img, Point(img.rows/2, 0), Point(img.rows/2, img.cols ));
-    //namedWindow("circles", 1);
-    //imshow("circles", img);
-    imwrite(path + "circles.png", img);
-    return img;
-}
-
 Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::string resultPath, bool saveResult, int count)
 {
     int size = 1000;
     
     Mat src = imread(path);
-    src = GetSquareImage(src, size);
+    src = Mestrado::Base::GetSquareImage(src, size);
     //imshow("original" + std::to_string(count), src);
     for (int i = 0; i < src.rows; i++) {
         for (int j = 0; j < src.cols; j++) {
@@ -241,9 +108,8 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     //imshow("inverted" + std::to_string(count), inverted);
     imwrite(path + "_inverted.png", inverted);
     
-    Hough(path + "_laplaciano.png");
-    
-    
+    Mestrado::Hough::GetHough(path + "_laplaciano.png");
+        
     //imshow("Hough Circle Transform Demo", src);
 
 
@@ -404,110 +270,38 @@ Mat Segmentar(std::string path, bool color, bool doCrop, bool cropDst, std::stri
     // return skel;
 }
 
-Mat RemoverFundo(std::string path)
-{
-    //int size = 1000;
-    Mat elementoEstruturante = (Mat_<float>(3, 3) <<
-        1, 1, 1,
-        1, -8, 1,
-        1, 1, 1);
-    
-    Mat src = imread(path);
-    //src = GetSquareImage(src, size);
-
-    Mat src2 ;
-    src.copyTo(src2);
-
-    for (int i = 0; i < src.rows; i++) {
-        for (int j = 0; j < src.cols; j++) {
-            double d = norm(src.at<Vec3b>(i, j));
-            if (d < 50)
-            {
-                src.at<Vec3b>(i, j)[0] = 0;
-                src.at<Vec3b>(i, j)[1] = 0;
-                src.at<Vec3b>(i, j)[2] = 0;
-            }
-            else {
-                src.at<Vec3b>(i, j)[0] = 255;
-                src.at<Vec3b>(i, j)[1] = 255;
-                src.at<Vec3b>(i, j)[2] = 255;
-            }
-        }
-    }
-
-    int menorLinha = src.rows;
-    int maiorLinha = 0;
-    int menorColuna = src.cols;
-    int maiorColuna = 0;
-
-    Mat temp;
-    erode(src, temp, elementoEstruturante);
-    erode(temp, temp, elementoEstruturante);
-
-    for (int i = 0; i < temp.rows; i++) {
-        for (int j = 0; j < temp.cols; j++) {
-            double d = norm(temp.at<Vec3b>(i, j));
-            if (d < 50)
-            {
-                src.at<Vec3b>(i, j)[0] = 0;
-                src.at<Vec3b>(i, j)[1] = 0;
-                src.at<Vec3b>(i, j)[2] = 0;
-            }
-            else {
-                if (i < menorLinha) {
-                    menorLinha = i;
-                }
-                if (i > maiorLinha) {
-                    maiorLinha = i;
-                }
-                if (j < menorColuna) {
-                    menorColuna = j;
-                }
-                if (j > maiorColuna) {
-                    maiorColuna = j;
-                }
-                src.at<Vec3b>(i, j)[0] = 255;
-                src.at<Vec3b>(i, j)[1] = 255;
-                src.at<Vec3b>(i, j)[2] = 255;
-            }
-        }
-    }
-
-    Mat matCroped;
-    cvtColor(src, matCroped, cv::COLOR_BGR2GRAY);
-    threshold(matCroped, matCroped, 150, 255, THRESH_BINARY);
-    Rect crop(menorColuna - 10, menorLinha - 10, maiorColuna + 10 - menorColuna, maiorLinha + 10 - menorLinha);
-    src = src(crop);
-
-    matCroped = src2(crop);
-    
-    // imshow("croped" + std::to_string(count), matCroped);
-
-    return matCroped;
-}
-
-
 int main(int argc, char* argv[])
 {
-    std::string imageFilePath = "E:\\Code\\felipemsfg.github.com\\mestrado\\opencvcpp\\ProjetoMestrado\\x64\\Debug\\imagens\\000-list.txt";
-    std::string saveResultFolder = "E:\\Code\\felipemsfg.github.com\\mestrado\\opencvcpp\\ProjetoMestrado\\x64\\Debug\\imagens\\result\\";
-    std::ifstream file(imageFilePath);
-    std::string str;
-    int count = 0;
-    while (std::getline(file, str))
-    {       
-        Mat result = Segmentar(str, true, false, true, saveResultFolder, true, count);
-        // Mat result = RemoverFundo(str);
-        //Mat result = Hough(str);
+    // GetAlturaMedia
+    // int altura = Mestrado::Altura::PegarAltura();
+    int altura = 1345;
+    Mestrado::ROI::CriarImagesDaAreaDeInteresse(altura);
 
-        //imshow("hit or miss " + std::to_string(count), result);
-        
-        imwrite(str + "_hit-or-miss.png", result);
-        cout << std::to_string(count) + " - " + str + "\n";
-        count++;
-    }
+    //std::string imageFilePath = "E:\\Code\\felipemsfg.github.com\\mestrado\\opencvcpp\\ProjetoMestrado\\x64\\Debug\\imagens\\000-list.txt";
+    //std::string imageFilePath = "E:\\Code\\felipemsfg.github.com\\mestrado\\opencvcpp\\ProjetoMestrado\\x64\\Debug\\imagens\\media-distancia.txt";
+    //std::string saveResultFolder = "E:\\Code\\felipemsfg.github.com\\mestrado\\opencvcpp\\ProjetoMestrado\\x64\\Debug\\imagens\\result\\";
+    //std::ifstream file(imageFilePath);
+    //std::string str;
+    //int count = 0;
+    //int alturaTotal = 0;
+    //while (std::getline(file, str))
+    //{       
+    //    int altura = Altura(str);
+    //    alturaTotal = altura + alturaTotal;
+    //    // Mat result = Segmentar(str, true, false, true, saveResultFolder, true, count);
+    //    // Mat result = RemoverFundo(str);
+    //    //Mat result = Hough(str);
 
-    waitKey();
+    //    //imshow("hit or miss " + std::to_string(count), result);
+    //    
+    //    // imwrite(str + "_hit-or-miss.png", result);
+    //    cout << std::to_string(count) + " - " + std::to_string(altura) + "\n";
+    //    count++;
+    //}
+    //int media = alturaTotal / count;
+    //cout << "Media da altura: " + std::to_string(media) + " - " + str + "\n";
+
+    //waitKey();
     return 0;
 }
 

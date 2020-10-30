@@ -151,7 +151,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Altura.cpp" />
+    <ClCompile Include="Base.cpp" />
+    <ClCompile Include="Draw.cpp" />
+    <ClCompile Include="Hough.cpp" />
+    <ClCompile Include="RegionOfInterest.cpp" />
     <ClCompile Include="Segmentacao.cpp" />
+    <ClCompile Include="Skeleton.cpp" />
+    <ClCompile Include="TratarFundo.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Altura.h" />
+    <ClInclude Include="Base.h" />
+    <ClInclude Include="Draw.h" />
+    <ClInclude Include="Hough.h" />
+    <ClInclude Include="RegionOfInterest.h" />
+    <ClInclude Include="Skeleton.h" />
+    <ClInclude Include="TratarFundo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
